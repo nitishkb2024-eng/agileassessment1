@@ -1,0 +1,395 @@
+Here is the complete, customized step-by-step procedure for your practical examination. Based on your examiner's scenario, we will build a Flask application that returns the required text. The configurations are mapped using vit-app as the core name, using 1 replica, exposing port 5000 on the container, and targeting NodePort 30080 for external access.
+
+Phase 1: Tool Verification
+
+Execute these commands in your PowerShell terminal to ensure your environment is healthy and context is correct before writing any code.
+powershell
+git --version
+python --version
+docker --version
+docker info
+kubectl version --client
+kubectl get nodes
+Use code with caution.
+Checkpoint: kubectl get nodes must output your local node (e.g., docker-desktop) with a status of Ready.
+
+Phase 2: Project Structure
+
+Create your project directory in VS Code. The structure must look exactly like this:
+text
+vit-devops-lab/
+│   app.py
+│   requirements.txt
+│   test_app.py
+│   Dockerfile
+│   .dockerignore
+│   .gitignore
+├───.github
+│   └───workflows
+│           pipeline.yml
+└───k8s
+        deployment.yaml
+        service.yaml
+Use code with caution.
+
+Phase 3: Flask Application Development
+
+
+app.py
+
+python
+from flask import Flask, jsonify
+
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "Hello VIT! DevOps Exam - Kubernetes CI/CD Working"
+
+@app.route('/health')
+def health():
+    return jsonify({"status": "healthy"}), 200
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
+Use code with caution.
+
+Phase 4: Requirements Definition
+
+
+requirements.txt
+
+text
+Flask>=3.0,<4.0
+pytest>=8.0,<9.0
+Use code with caution.
+
+Phase 5: Testing Framework
+
+
+test_app.py
+
+python
+import pytest
+from app import app
+
+@pytest.fixture
+def client():
+    app.config['TESTING'] = True
+    with app.test_client() as client:
+        yield client
+
+def test_home_route(client):
+    response = client.get('/')
+    assert response.status_code == 200
+    assert b"Hello VIT! DevOps Exam - Kubernetes CI/CD Working" in response.data
+
+def test_health_route(client):
+    response = client.get('/health')
+    assert response.status_code == 200
+    assert response.get_json() == {"status": "healthy"}
+Use code with caution.
+
+Phase 6: Local Execution & Testing (PowerShell)
+
+If execution policy errors prevent script execution, use the bypass command first. Run these tests without manually activating the virtual environment prompt:
+powershell
+# Optional: Run this if script execution is blocked in your session
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+
+# Create and populate environment
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+
+# Execute unit tests
+.\.venv\Scripts\python.exe -m pytest -v
+
+# Run app locally to verify
+.\.venv\Scripts\python.exe app.py
+Use code with caution.
+Checkpoint: Terminal should show unit tests passing, and navigating to http://localhost:5000 inside your browser should present the VIT greeting. Press Ctrl + C in PowerShell to turn off the local app.
+
+Phase 7: Dockerization
+
+
+Dockerfile
+
+dockerfile
+FROM python:3.12-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY app.py .
+EXPOSE 5000
+CMD ["python", "app.py"]
+Use code with caution.
+
+.dockerignore
+
+text
+.venv/
+__pycache__/
+.pytest_cache/
+.git/
+.gitignore
+k8s/
+.github/
+Use code with caution.
+Run the container build, execution, and cleanup commands:
+powershell
+# Build image
+docker build -t vit-app:v1 .
+
+# Run container background
+docker run --rm -d --name vit-container -p 5000:5000 vit-app:v1
+
+# Inspect state
+docker ps
+docker logs vit-container
+
+# Stop and clean up container
+docker stop vit-container
+Use code with caution.
+Checkpoint: While running, http://localhost:5000 must serve the same application message from the Docker container environment.
+
+Phase 8: Source Control Setup
+
+
+.gitignore
+
+text
+.venv/
+__pycache__/
+.pytest_cache/
+.env
+Use code with caution.
+Initialize your repository and push to GitHub (Create a new, completely blank repository on GitHub named vit-devops-lab without checking any README or license options):
+powershell
+git init
+git add .
+git commit -m "feat: initial commit with vit application and pipeline"
+git branch -M main
+git remote add origin https://github.com
+git push -u origin main
+Use code with caution.
+(Replace YOUR_GITHUB_USERNAME with your actual GitHub username).
+
+Phase 9: Continuous Integration Pipeline
+
+
+.github/workflows/pipeline.yml
+
+yaml
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run Tests
+      run: |
+        python -m pytest -v
+Use code with caution.
+
+Demonstrating a Failing and Fixed Test:
+
+1. Break the test: Modify the string in test_app.py to check for assert b"Hello FAILED Exam" in response.data.
+2. Push changes: git add test_app.py, git commit -m "test: trigger failure", git push. Look at the Actions tab on GitHub to show the examiner the red failed build.
+3. Revert/Fix the test: Change it back to assert b"Hello VIT! DevOps Exam - Kubernetes CI/CD Working" in response.data.
+4. Push clean version: git add test_app.py, git commit -m "fix: restore working test", git push. The workflow turns green.
+
+Phase 10: Docker Hub Integration & Continuous Deployment
+
+1. Log into your Docker Hub account. Create a public repository named vit-app.
+2. Navigate to Account Settings > Security > New Access Token. Generate it and copy the token value.
+3. On GitHub, navigate to your repository Settings > Secrets and variables > Actions.
+4. Create DOCKERHUB_USERNAME (your Docker Hub user name) and DOCKERHUB_TOKEN (the copied token).
+5. Append the docker job step directly into your .github/workflows/pipeline.yml file so it contains both jobs.
+
+Complete .github/workflows/pipeline.yml with Deploy Stage
+
+yaml
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run Tests
+      run: |
+        python -m pytest -v
+
+  docker:
+    needs: test
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: images_api:docker/setup-buildx-action@v3
+
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Build and Push Docker Image
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        push: true
+        tags: |
+          ${{ secrets.DOCKERHUB_USERNAME }}/vit-app:latest
+          ${{ secrets.DOCKERHUB_USERNAME }}/vit-app:${{ github.sha }}
+Use code with caution.
+Execute git add .github/workflows/pipeline.yml, git commit -m "ci: add docker hub push stage", git push.
+Checkpoint: Check your Docker Hub repository online. You should see an image tagged with the long alphanumeric GitHub commit SHA.
+
+Phase 11: Kubernetes Orchestration
+
+
+k8s/deployment.yaml
+
+yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vit-deployment
+  labels:
+    app: vit-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vit-app
+  template:
+    metadata:
+      labels:
+        app: vit-app
+    spec:
+      containers:
+      - name: vit-container
+        image: YOUR_DOCKERHUB_USERNAME/vit-app:latest
+        ports:
+        - containerPort: 5000
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+Use code with caution.
+(Replace YOUR_DOCKERHUB_USERNAME with your real Docker Hub user ID string).
+
+k8s/service.yaml
+
+yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: vit-service
+spec:
+  type: NodePort
+  selector:
+    app: vit-app
+  ports:
+    - port: 80
+      targetPort: 5000
+      nodePort: 30080
+Use code with caution.
+Apply your resources onto Docker Desktop's cluster:
+powershell
+kubectl config current-context
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/service.yaml
+kubectl rollout status deployment/vit-deployment
+kubectl get deployments
+kubectl get pods
+kubectl get services
+Use code with caution.
+Checkpoint: Fire up your web browser and open http://localhost:30080/. You will read the text "Hello VIT! DevOps Exam - Kubernetes CI/CD Working". Check health status by going to http://localhost:30080/health.
+
+Phase 12: Continuous Update Demonstration
+
+1. Update app.py: Change the string return value inside home() to "Hello VIT! Updated Application Version 2 Running Strong".
+2. Update test_app.py: Update your test assertion string to match the new sentence precisely.
+3. Push changes:powershell
+git add app.py test_app.py
+git commit -m "chore: update welcome text message"
+git push
+Use code with caution.
+4. Copy the brand new Commit SHA string directly from your GitHub repository commits list page or terminal window.
+5. Push the deployment update directly out to Kubernetes using the tag matching that new version payload:powershell
+kubectl set image deployment/vit-deployment vit-container=YOUR_DOCKERHUB_USERNAME/vit-app:NEW_COMMIT_SHA
+kubectl rollout status deployment/vit-deployment
+kubectl get pods
+Use code with caution.
+Checkpoint: Refresh http://localhost:30080/. The text instantly changes to reflect your new Version 2 message.
+
+
+
+
+Demonstration Checklist
+
+Run these commands to prove the deployment status to the examiner:
+powershell
+# 1. Show all deployed components
+kubectl get all
+
+# 2. Check running pod details and readiness probe status
+kubectl describe deployment vit-deployment
+
+# 3. Stream cluster application logs live
+kubectl logs deployment/vit-deployment --tail=20
+
+# 4. Immediate application rollback if deployment fails
+kubectl rollout undo deployment/vit-deployment
+Use code with caution.
+Let me know if you hit any errors while running the pytest suite or if your Kubernetes node state shows something other than Ready!
